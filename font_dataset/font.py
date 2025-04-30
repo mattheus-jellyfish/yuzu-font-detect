@@ -39,12 +39,14 @@ def load_fonts(config_path="configs/font.yml"):
                 if rule is not None and not rule(file):
                     print("skip: " + file)
                     continue
-                font_list.append(DSFont(str(file).replace("\\", "/"), spec["language"]))
+                # Normalize the path to remove redundant dots and slashes
+                normalized_path = os.path.normpath(file).replace("\\", "/")
+                font_list.append(DSFont(normalized_path, spec["language"]))
 
     font_list.sort(key=lambda x: x.path)
 
     exclusion_list = ds_config["exclusion"]
-    exclusion_list = [os.path.join(ds_path, path) for path in exclusion_list]
+    exclusion_list = [os.path.normpath(os.path.join(ds_path, path)).replace("\\", "/") for path in exclusion_list]
 
     def exclusion_rule(font: DSFont):
         for exclusion in exclusion_list:

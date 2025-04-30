@@ -71,7 +71,7 @@ assert no_rotation_ratio + rotation_ratio - 1 < epislon
 # in degree
 rotation_max_angle = 30
 
-text_size_min = 15
+text_size_min = 9
 
 # ratio of dataset size for cjk
 cjk_distribution = {
@@ -112,7 +112,7 @@ def render_bbox(
     stroke_width=0,
     embedded_color=False,
 ):
-    if ("\n" in text or "\r" in text) and direction == "ttb":
+    if "\n" in text or "\r" in text:
         lines = text.splitlines(keepends=False)
         height = 0
         width = 0
@@ -126,11 +126,8 @@ def render_bbox(
                 anchor,
                 spacing,
                 align,
-                direction,
-                features,
-                language,
-                stroke_width,
-                embedded_color,
+                stroke_width=stroke_width,
+                embedded_color=embedded_color,
             )
             height = max(height, bbox[3] - bbox[1])
             width += bbox[2] - bbox[0]
@@ -148,11 +145,8 @@ def render_bbox(
             anchor,
             spacing,
             align,
-            direction,
-            features,
-            language,
-            stroke_width,
-            embedded_color,
+            stroke_width=stroke_width,
+            embedded_color=embedded_color,
         )
 
 
@@ -174,7 +168,7 @@ def render_text(
     *args,
     **kwargs,
 ):
-    if ("\n" in text or "\r" in text) and direction == "ttb":
+    if "\n" in text or "\r" in text:
         lines = text.splitlines(keepends=False)
         margin_x = 0
         x, y = xy
@@ -186,11 +180,8 @@ def render_text(
                 anchor,
                 spacing,
                 align,
-                direction,
-                features,
-                language,
-                stroke_width,
-                embedded_color,
+                stroke_width=stroke_width,
+                embedded_color=embedded_color,
             )
             draw.text(
                 (x + margin_x, y),
@@ -200,12 +191,9 @@ def render_text(
                 anchor,
                 spacing,
                 align,
-                direction,
-                features,
-                language,
-                stroke_width,
-                stroke_fill,
-                embedded_color,
+                stroke_width=stroke_width,
+                stroke_fill=stroke_fill,
+                embedded_color=embedded_color,
                 *args,
                 **kwargs,
             )
@@ -220,12 +208,9 @@ def render_text(
             anchor,
             spacing,
             align,
-            direction,
-            features,
-            language,
-            stroke_width,
-            stroke_fill,
-            embedded_color,
+            stroke_width=stroke_width,
+            stroke_fill=stroke_fill,
+            embedded_color=embedded_color,
             *args,
             **kwargs,
         )
@@ -318,10 +303,8 @@ def generate_font_image(
         (0, 0),
         text,
         font=pil_font,
-        direction=text_direction,
         spacing=render_calculation_line_spacing,
         stroke_width=render_calculation_stroke_width,
-        language=render_language,
     )
     (
         render_calculation_width_no_rotation,
@@ -412,11 +395,9 @@ def generate_font_image(
         text,
         font=pil_font,
         fill=RGB2RGBA(text_color),
-        direction=text_direction,
         spacing=line_spacing,
         stroke_width=stroke_width,
         stroke_fill=RGB2RGBA(stroke_color),
-        language=render_language,
     )
     if rotation_max_angle != 0:
         font_image = font_image.rotate(

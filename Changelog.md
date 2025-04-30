@@ -12,18 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added virtual environment (.venv) setup for isolated development
 - Added L4 GPU-specific installation option for CUDA 12.1 dependencies
 - Added README_UPGRADE.md with uv sync commands for dependency management
+- Added English language font support with dedicated corpus generator
+- Added English fonts specification to configs/font.yml with proper format
+- Generated sample font images for English fonts in the dataset
 
 ### Changed
 - Updated dependency specifications to be more flexible
-- Fixed torch and torchvision versions to 2.5.1 and 0.20.1 for consistent CUDA 12.1 compatibility
-- Updated PyTorch configuration for broader compatibility
-- Updated Lightning (formerly PyTorch Lightning)
-- Updated Gradio to latest version
-- Updated Pillow to latest stable version 
-- Updated all dependencies to versions compatible with modern environments
-- Simplified dependency management by removing uv-specific configuration
+- Fixed torch installation requirements
+- Modified layout.py to work without libraqm dependency
+- Used uv to install and manage dependencies
+- Reduced text_size_min from 15 to 9 to support more fonts
+- Improved path normalization in font loading to prevent path format issues
+- Enhanced the EnglishCorpusGenerator to better handle fonts with limited character support
 
 ### Fixed
-- Resolved deprecated API calls in PyTorch and Lightning libraries
-- Fixed compatibility issues with newer CUDA versions
-- Fixed virtual environment setup script for broader compatibility 
+- Fixed issues with language and direction parameters in the font rendering functions
+- Fixed font skipping issues during dataset generation
+- Fixed UnqualifiedFontException by improving character validation and fallback mechanisms
+- Addressed path format inconsistencies that caused font loading problems
+
+## [0.1.0] - 2023-06-18
+### Added
+- Initial release of the YuzuMarker.FontDetection module 
