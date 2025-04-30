@@ -1,4 +1,4 @@
-FROM docker.io/pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
+FROM docker.io/pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 
 COPY ./requirements.txt /workspace/requirements.txt
 
