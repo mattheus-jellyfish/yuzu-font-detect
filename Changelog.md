@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Updated dependency specifications to be more flexible
+- Fixed torch and torchvision versions to 2.5.1 and 0.20.1 for consistent CUDA 12.1 compatibility
 - Updated PyTorch configuration for broader compatibility
 - Updated Lightning (formerly PyTorch Lightning)
 - Updated Gradio to latest version
