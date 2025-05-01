@@ -3,6 +3,7 @@ import os
 import torch
 import pytorch_lightning as ptl
 from pytorch_lightning.loggers import TensorBoardLogger
+import multiprocessing
 
 from detector.data import FontDataModule
 from detector.model import *
@@ -110,115 +111,144 @@ parser.add_argument(
     help="Preserve aspect ratio (default: False)",
 )
 
-args = parser.parse_args()
+def main():
+    args = parser.parse_args()
 
-torch.set_float32_matmul_precision(args.tensor_core)
+    torch.set_float32_matmul_precision(args.tensor_core)
 
-devices = args.devices
-single_batch_size = args.single_batch_size
+    devices = args.devices
+    single_batch_size = args.single_batch_size
 
-total_num_workers = os.cpu_count()
-single_device_num_workers = total_num_workers // len(devices)
+    total_num_workers = os.cpu_count()
+    single_device_num_workers = total_num_workers // len(devices)
 
-config.INPUT_SIZE = args.size
+    config.INPUT_SIZE = args.size
 
-if os.name == "nt":
-    single_device_num_workers = 0
+    if os.name == "nt":
+        single_device_num_workers = 0
+    
+    # On macOS, limit number of workers to avoid issues
+    if os.name == "posix" and sys.platform == "darwin":
+        single_device_num_workers = min(2, single_device_num_workers)
+    
+    # For L4 GPU on GCP, optimize worker count for CUDA
+    if torch.cuda.is_available() and torch.cuda.get_device_properties(0).name.find('L4') >= 0:
+        # L4 has good multi-threading capabilities - use more workers
+        single_device_num_workers = min(6, single_device_num_workers)
+        print(f"NVIDIA L4 GPU detected, using {single_device_num_workers} workers per device")
 
-lr = args.lr
-b1 = 0.9
-b2 = 0.999
+    lr = args.lr
+    b1 = 0.9
+    b2 = 0.999
 
-lambda_font = 2.0
-lambda_direction = 0.5
-lambda_regression = 1.0
+    lambda_font = 2.0
+    lambda_direction = 0.5
+    lambda_regression = 1.0
 
-regression_use_tanh = False
+    regression_use_tanh = False
 
-num_warmup_epochs = 5
-num_epochs = 100
+    num_warmup_epochs = 5
+    num_epochs = 100
 
-log_every_n_steps = 100
+    log_every_n_steps = 1 #100
 
-num_device = len(devices)
+    num_device = len(devices)
 
-data_module = FontDataModule(
-    train_paths=[os.path.join(path, "train") for path in args.datasets],
-    val_paths=[os.path.join(path, "val") for path in args.datasets],
-    test_paths=[os.path.join(path, "test") for path in args.datasets],
-    batch_size=single_batch_size,
-    num_workers=single_device_num_workers,
-    pin_memory=True,
-    train_shuffle=True,
-    val_shuffle=False,
-    test_shuffle=False,
-    regression_use_tanh=regression_use_tanh,
-    train_transforms=args.augmentation,
-    crop_roi_bbox=args.crop_roi_bbox,
-    preserve_aspect_ratio_by_random_crop=args.preserve_aspect_ratio_by_random_crop,
-)
-
-num_iters = data_module.get_train_num_iter(num_device) * num_epochs
-num_warmup_iter = data_module.get_train_num_iter(num_device) * num_warmup_epochs
-
-model_name = get_current_tag() if args.model_name is None else args.model_name
-
-logger_unconditioned = TensorBoardLogger(
-    save_dir=os.getcwd(), name="tensorboard", version=model_name
-)
-
-strategy = "auto" if num_device == 1 else "ddp"
-
-trainer = ptl.Trainer(
-    max_epochs=num_epochs,
-    logger=logger_unconditioned,
-    devices=devices,
-    accelerator="gpu",
-    enable_checkpointing=True,
-    log_every_n_steps=log_every_n_steps,
-    strategy=strategy,
-    deterministic=True,
-)
-
-if args.model == "resnet18":
-    model = ResNet18Regressor(
-        pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
+    data_module = FontDataModule(
+        train_paths=[os.path.join(path, "train") for path in args.datasets],
+        val_paths=[os.path.join(path, "val") for path in args.datasets],
+        test_paths=[os.path.join(path, "test") for path in args.datasets],
+        batch_size=single_batch_size,
+        num_workers=single_device_num_workers,
+        pin_memory=True,
+        train_shuffle=True,
+        val_shuffle=False,
+        test_shuffle=False,
+        regression_use_tanh=regression_use_tanh,
+        train_transforms=args.augmentation,
+        crop_roi_bbox=args.crop_roi_bbox,
+        preserve_aspect_ratio_by_random_crop=args.preserve_aspect_ratio_by_random_crop,
+        persistent_workers=True  # Add persistent workers for better performance on L4
     )
-elif args.model == "resnet34":
-    model = ResNet34Regressor(
-        pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
-    )
-elif args.model == "resnet50":
-    model = ResNet50Regressor(
-        pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
-    )
-elif args.model == "resnet101":
-    model = ResNet101Regressor(
-        pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
-    )
-elif args.model == "deepfont":
-    assert args.pretrained is False
-    assert args.size == 105
-    assert args.font_classification_only is True
-    model = DeepFontBaseline()
-else:
-    raise NotImplementedError()
 
-if torch.__version__ >= "2.0" and os.name == "posix":
-    model = torch.compile(model)
+    num_iters = data_module.get_train_num_iter(num_device) * num_epochs
+    num_warmup_iter = data_module.get_train_num_iter(num_device) * num_warmup_epochs
 
-detector = FontDetector(
-    model=model,
-    lambda_font=lambda_font,
-    lambda_direction=lambda_direction,
-    lambda_regression=lambda_regression,
-    font_classification_only=args.font_classification_only,
-    lr=lr,
-    betas=(b1, b2),
-    num_warmup_iters=num_warmup_iter,
-    num_iters=num_iters,
-    num_epochs=num_epochs,
-)
+    model_name = get_current_tag() if args.model_name is None else args.model_name
 
-trainer.fit(detector, datamodule=data_module, ckpt_path=args.checkpoint)
-trainer.test(detector, datamodule=data_module)
+    logger_unconditioned = TensorBoardLogger(
+        save_dir=os.getcwd(), name="tensorboard", version=model_name
+    )
+
+    strategy = "auto" if num_device == 1 else "ddp"
+
+    # Check for NVIDIA L4 GPU and configure PyTorch Lightning appropriately
+    if torch.cuda.is_available() and torch.cuda.get_device_properties(0).name.find('L4') >= 0:
+        print("Optimizing trainer settings for NVIDIA L4 GPU")
+        
+    trainer = ptl.Trainer(
+        max_epochs=num_epochs,
+        logger=logger_unconditioned,
+        devices=devices,
+        accelerator="gpu",
+        enable_checkpointing=True,
+        log_every_n_steps=log_every_n_steps,
+        strategy=strategy,
+        deterministic=True,
+        precision="16-mixed" if torch.cuda.is_available() else "32",  # Use mixed precision on L4 for better performance
+    )
+
+    if args.model == "resnet18":
+        model = ResNet18Regressor(
+            pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
+        )
+    elif args.model == "resnet34":
+        model = ResNet34Regressor(
+            pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
+        )
+    elif args.model == "resnet50":
+        model = ResNet50Regressor(
+            pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
+        )
+    elif args.model == "resnet101":
+        model = ResNet101Regressor(
+            pretrained=args.pretrained, regression_use_tanh=regression_use_tanh
+        )
+    elif args.model == "deepfont":
+        assert args.pretrained is False
+        assert args.size == 105
+        assert args.font_classification_only is True
+        model = DeepFontBaseline()
+    else:
+        raise NotImplementedError()
+
+    # Optimize for CUDA GPUs, especially for L4
+    if torch.__version__ >= "2.0" and torch.cuda.is_available():
+        print("Compiling model with torch.compile() for faster training...")
+        try:
+            # For L4 GPU, inductor backend works well
+            model = torch.compile(model, backend="inductor")
+            print("Successfully compiled model with inductor backend")
+        except Exception as e:
+            print(f"Warning: Model compilation failed, falling back to eager mode: {e}")
+            print("Training will continue but may be slower")
+
+    detector = FontDetector(
+        model=model,
+        lambda_font=lambda_font,
+        lambda_direction=lambda_direction,
+        lambda_regression=lambda_regression,
+        font_classification_only=args.font_classification_only,
+        lr=lr,
+        betas=(b1, b2),
+        num_warmup_iters=num_warmup_iter,
+        num_iters=num_iters,
+        num_epochs=num_epochs,
+    )
+
+    trainer.fit(detector, datamodule=data_module, ckpt_path=args.checkpoint)
+    trainer.test(detector, datamodule=data_module)
+
+if __name__ == "__main__":
+    import sys
+    main()

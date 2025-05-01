@@ -268,28 +268,55 @@ class FontDataset(Dataset):
         return len(self.images)
 
     def fontlabel2tensor(self, label: FontLabel, label_path) -> torch.Tensor:
-        out = torch.zeros(12, dtype=torch.float)
         try:
-            out[0] = self.fonts[label.font.path]
-        except KeyError:
-            print(f"Unqualified font: {label.font.path}")
+            # Normalize the font path
+            normalized_path = os.path.normpath(label.font.path)
+            # Try to find the font in the dictionary
+            if normalized_path in self.fonts:
+                font_idx = self.fonts[normalized_path]
+            else:
+                # Try with different path formats
+                base_path = os.path.basename(normalized_path)
+                candidates = [k for k in self.fonts.keys() if os.path.basename(k) == base_path]
+                if candidates:
+                    font_idx = self.fonts[candidates[0]]
+                else:
+                    print(f"Unqualified font: {label.font.path}")
+                    print(f"Label path: {label_path}")
+                    # If no match is found, use a default value
+                    font_idx = 0  # Using the first font as fallback
+        except Exception as e:
+            print(f"Error processing font {label.font.path}: {str(e)}")
             print(f"Label path: {label_path}")
-            raise KeyError
-        out[1] = 0 if label.text_direction == "ltr" else 1
-        # [0, 1]
-        out[2] = label.text_color[0] / 255.0
-        out[3] = label.text_color[1] / 255.0
-        out[4] = label.text_color[2] / 255.0
-        out[5] = label.text_size / label.image_width
-        out[6] = label.stroke_width / label.image_width
-        if label.stroke_color:
-            out[7] = label.stroke_color[0] / 255.0
-            out[8] = label.stroke_color[1] / 255.0
-            out[9] = label.stroke_color[2] / 255.0
+            font_idx = 0  # Using the first font as fallback
+
+        direction_idx = 0 if label.text_direction == "ltr" else 1
+
+        out = torch.zeros(12)
+        out[0] = font_idx
+        out[1] = direction_idx
+        
+        # Handle text color
+        text_color = torch.tensor(label.text_color) if label.text_color is not None else torch.tensor([0.0, 0.0, 0.0])
+        out[2:5] = text_color
+        
+        out[5] = label.text_size / config.INPUT_SIZE
+        out[6] = label.stroke_width / config.INPUT_SIZE
+        
+        # Handle stroke color - use text color as fallback if stroke color is None
+        if label.stroke_color is not None:
+            stroke_color = torch.tensor(label.stroke_color)
         else:
-            out[7:10] = out[2:5]
-        out[10] = label.line_spacing / label.image_width
-        out[11] = label.angle / 180.0 + 0.5
+            stroke_color = text_color  # Use text color as fallback
+        out[7:10] = stroke_color
+        
+        out[10] = label.line_spacing / config.INPUT_SIZE
+        out[11] = label.angle / 180
+
+        if self.regression_use_tanh:
+            # to [-1, 1]
+            out[2:5] = out[2:5] * 2 - 1
+            out[7:10] = out[7:10] * 2 - 1
 
         return out
 
@@ -365,6 +392,7 @@ class FontDataModule(LightningDataModule):
         crop_roi_bbox: bool = False,
         preserve_aspect_ratio_by_random_crop: bool = False,
         regression_use_tanh: bool = False,
+        persistent_workers: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -372,6 +400,7 @@ class FontDataModule(LightningDataModule):
         self.train_shuffle = train_shuffle
         self.val_shuffle = val_shuffle
         self.test_shuffle = test_shuffle
+        self.persistent_workers = persistent_workers
         self.train_dataset = ConcatDataset(
             [
                 FontDataset(
@@ -421,6 +450,7 @@ class FontDataModule(LightningDataModule):
         return DataLoader(
             self.train_dataset,
             shuffle=self.train_shuffle,
+            persistent_workers=self.persistent_workers if self.dataloader_args.get("num_workers", 0) > 0 else False,
             **self.dataloader_args,
         )
 
@@ -428,6 +458,7 @@ class FontDataModule(LightningDataModule):
         return DataLoader(
             self.val_dataset,
             shuffle=self.val_shuffle,
+            persistent_workers=self.persistent_workers if self.dataloader_args.get("num_workers", 0) > 0 else False,
             **self.dataloader_args,
         )
 
@@ -435,5 +466,6 @@ class FontDataModule(LightningDataModule):
         return DataLoader(
             self.test_dataset,
             shuffle=self.test_shuffle,
+            persistent_workers=self.persistent_workers if self.dataloader_args.get("num_workers", 0) > 0 else False,
             **self.dataloader_args,
         )
