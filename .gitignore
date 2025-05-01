@@ -8,7 +8,8 @@ font_demo_cache.bin
 
 
 wordlist.txt
-dataset
+dataset_archive/
+dataset/
 lyrics_corpus/cache
 
 # Byte-compiled / optimized / DLL files
