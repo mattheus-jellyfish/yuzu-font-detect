@@ -246,8 +246,8 @@ def main():
         print("Compiling model with torch.compile() for faster training...")
         try:
             # For L4 GPU, inductor backend works well
-            model = torch.compile(model, backend="inductor")
-            print("Successfully compiled model with inductor backend")
+            model = torch.compile(model, backend="eager")
+            print("Successfully compiled model with eager backend")
         except Exception as e:
             print(f"Warning: Model compilation failed, falling back to eager mode: {e}")
             print("Training will continue but may be slower")
