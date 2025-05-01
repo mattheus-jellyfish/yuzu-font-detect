@@ -3,6 +3,7 @@ import os
 import torch
 import pytorch_lightning as ptl
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 import multiprocessing
 
 from detector.data import FontDataModule
@@ -148,7 +149,7 @@ def main():
     regression_use_tanh = False
 
     num_warmup_epochs = 5
-    num_epochs = 100
+    num_epochs = 5 #100
 
     log_every_n_steps = 1 #100
 
@@ -185,6 +186,23 @@ def main():
     # Check for NVIDIA L4 GPU and configure PyTorch Lightning appropriately
     if torch.cuda.is_available() and torch.cuda.get_device_properties(0).name.find('L4') >= 0:
         print("Optimizing trainer settings for NVIDIA L4 GPU")
+    
+    # Setup callbacks
+    early_stop_callback = EarlyStopping(
+        monitor='val_loss',
+        min_delta=0.00,
+        patience=5,  # Stop if no improvement for 5 epochs
+        verbose=True,
+        mode='min'
+    )
+    
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_loss',
+        dirpath='checkpoints/',
+        filename=f'{model_name}-{{epoch:02d}}-{{val_loss:.2f}}',
+        save_top_k=3,
+        mode='min'
+    )
         
     trainer = ptl.Trainer(
         max_epochs=num_epochs,
@@ -196,6 +214,7 @@ def main():
         strategy=strategy,
         deterministic=True,
         precision="16-mixed" if torch.cuda.is_available() else "32",  # Use mixed precision on L4 for better performance
+        callbacks=[early_stop_callback, checkpoint_callback]  # Add callbacks here
     )
 
     if args.model == "resnet18":

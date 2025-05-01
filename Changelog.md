@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added optimizations specifically for NVIDIA L4 GPU on GCP Colab Enterprise
 - Added mixed precision training for faster training on L4 GPU
 - Added robust error handling for torch.compile to prevent training failures
+- Added early stopping and model checkpointing to prevent overfitting and save best models
 
 ### Changed
 - Updated dependency specifications to be more flexible
