@@ -135,7 +135,7 @@ def main():
     # For L4 GPU on GCP, optimize worker count for CUDA
     if torch.cuda.is_available() and torch.cuda.get_device_properties(0).name.find('L4') >= 0:
         # L4 has good multi-threading capabilities - use more workers
-        single_device_num_workers = min(6, single_device_num_workers)
+        single_device_num_workers = min(2, single_device_num_workers)
         print(f"NVIDIA L4 GPU detected, using {single_device_num_workers} workers per device")
 
     lr = args.lr
@@ -149,7 +149,7 @@ def main():
     regression_use_tanh = False
 
     num_warmup_epochs = 5
-    num_epochs = 5 #100
+    num_epochs = 50 #100
 
     log_every_n_steps = 1 #100
 
