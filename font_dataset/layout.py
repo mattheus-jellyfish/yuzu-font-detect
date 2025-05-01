@@ -71,7 +71,7 @@ assert no_rotation_ratio + rotation_ratio - 1 < epislon
 # in degree
 rotation_max_angle = 30
 
-text_size_min = 9
+text_size_min = 12
 
 # ratio of dataset size for cjk
 cjk_distribution = {
