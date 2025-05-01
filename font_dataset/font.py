@@ -60,13 +60,13 @@ def load_fonts(config_path="configs/font.yml"):
 def load_font_with_exclusion(
     config_path="configs/font.yml", cache_path="font_list_cache.bin"
 ) -> Dict:
-    if os.path.exists(cache_path):
-        return pickle.load(open(cache_path, "rb"))
+    # Skip reading from cache and always load directly
     font_list, exclusion_rule = load_fonts(config_path)
     font_list = list(filter(lambda x: not exclusion_rule(x), font_list))
     font_list.sort(key=lambda x: x.path)
     print("font count: " + str(len(font_list)))
     ret = {font_list[i].path: i for i in range(len(font_list))}
+    # Optionally still write the cache for debugging
     with open(cache_path, "wb") as f:
         pickle.dump(ret, f)
     return ret
