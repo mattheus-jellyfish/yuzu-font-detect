@@ -198,7 +198,7 @@ def main():
     
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
-        dirpath='checkpoints/',
+        dirpath=logger_unconditioned.log_dir,
         filename=f'{model_name}-{{epoch:02d}}-{{val_loss:.2f}}',
         save_top_k=3,
         mode='min'
