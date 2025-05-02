@@ -149,7 +149,7 @@ def main():
     regression_use_tanh = False
 
     num_warmup_epochs = 5
-    num_epochs = 50 #100
+    num_epochs = 5 #100
 
     log_every_n_steps = 1 #100
 

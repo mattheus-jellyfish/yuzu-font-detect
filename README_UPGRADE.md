@@ -57,4 +57,9 @@ To set up a new environment from scratch:
 
 # For L4 GPU with CUDA 12.1 support
 ./setup_venv.sh --l4gpu
-``` 
+```
+
+# Running model training
+```bash
+python train.py -m resnet18 -p -b 128 -i -a v3 -n resnet18_$(date +"%y%m%d_%H%M")_135_fonts_128_batch -f
+```
