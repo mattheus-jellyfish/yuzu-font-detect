@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added mixed precision training for faster training on L4 GPU
 - Added robust error handling for torch.compile to prevent training failures
 - Added early stopping and model checkpointing to prevent overfitting and save best models
+- Added `predict.py` script for loading trained models and making predictions on images
+- Support for loading model checkpoints with the same configuration used during training
+- Command-line interface for prediction with customizable parameters
+- Enhanced image preprocessing in `predict.py` to match training pipeline
+- Added ROI bounding box cropping support to `predict.py`
+- Added augmentation strategy parameter to ensure preprocessing compatibility
+- Added Apple Silicon (M1/M2) GPU support for model inference using MPS backend
+- Added enhanced error handling in predict.py for better cross-platform compatibility
+- Added full font filename display in prediction results
 
 ### Changed
 - Updated dependency specifications to be more flexible
@@ -32,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optimized DataLoader worker count based on GPU environment
 - Improved torch.compile usage with better backend selection for L4 GPU
 - Removed unnecessary multiprocessing.freeze_support() on Linux environments
+- Improved model loading process to gracefully handle device transitions
+- Enhanced font name display to show complete filenames instead of partial paths
 
 ### Fixed
 - Fixed issues with language and direction parameters in the font rendering functions
@@ -42,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added worker limits for macOS to prevent crashes during data loading
 - Fixed handling of None stroke_color values by using text_color as fallback
 - Fixed compatibility issues with training on different GPU architectures
+- Fixed CUDA device mismatch issues when loading models on CPU-only or MPS systems
+- Fixed truncated font names in prediction results by using full filenames
 
 ## [0.1.0] - 2023-06-18
 ### Added
