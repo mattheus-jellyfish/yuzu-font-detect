@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed compatibility issues with training on different GPU architectures
 - Fixed CUDA device mismatch issues when loading models on CPU-only or MPS systems
 - Fixed truncated font names in prediction results by using full filenames
+- Fixed "selected index k out of range" error in predict.py by ensuring num_results doesn't exceed available fonts
 
 ## [0.1.0] - 2023-06-18
 ### Added

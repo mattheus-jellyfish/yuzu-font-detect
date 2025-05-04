@@ -144,7 +144,7 @@ def load_model(args):
     if torch.__version__ >= "2.0" and os.name == "posix":
         # Only apply torch.compile on CUDA devices for better compatibility
         if device.type == "cuda":
-            model = torch.compile(model)
+            model = torch.compile(model, mode="aot_eager")
             torch._dynamo.config.suppress_errors = True
 
     if args.checkpoint and str(args.checkpoint).startswith("huggingface://"):
@@ -235,6 +235,14 @@ def recognize_font(image_path, detector, device, font_list, num_results=5):
         output = detector(transformed_image.unsqueeze(0))
         prob = output[0][: config.FONT_COUNT].softmax(dim=0)
         
+        # Ensure num_results doesn't exceed the number of fonts
+        available_fonts = min(prob.size(0), len(font_list))
+        num_results = min(num_results, available_fonts)
+        
+        if num_results == 0:
+            print("No fonts available for prediction.")
+            return None
+            
         top_indices = torch.topk(prob, num_results)
         indices = top_indices.indices
         scores = top_indices.values
