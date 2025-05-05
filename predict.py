@@ -144,7 +144,7 @@ def load_model(args):
     if torch.__version__ >= "2.0" and os.name == "posix":
         # Only apply torch.compile on CUDA devices for better compatibility
         if device.type == "cuda":
-            model = torch.compile(model, mode="aot_eager")
+            model = torch.compile(model, backend="aot_eager")
             torch._dynamo.config.suppress_errors = True
 
     if args.checkpoint and str(args.checkpoint).startswith("huggingface://"):
