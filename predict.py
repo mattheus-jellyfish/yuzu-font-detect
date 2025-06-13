@@ -156,10 +156,57 @@ def load_model(args):
     if args.checkpoint:
         print(f"Loading checkpoint from {args.checkpoint}")
         try:
-            # Always load to CPU first, then move to target device
-            detector = FontDetector.load_from_checkpoint(
-                args.checkpoint,
-                map_location=map_location,
+        #     # Always load to CPU first, then move to target device
+        #     detector = FontDetector.load_from_checkpoint(
+        #         args.checkpoint,
+        #         map_location=map_location,
+        #         model=model,
+        #         lambda_font=1,
+        #         lambda_direction=1,
+        #         lambda_regression=1,
+        #         font_classification_only=args.font_classification_only,
+        #         lr=1,
+        #         betas=(1, 1),
+        #         num_warmup_iters=1,
+        #         num_iters=1e9,
+        #         num_epochs=1e9,
+        #     )
+        # except RuntimeError as e:
+        #     print(f"Error loading checkpoint: {str(e)}")
+        #     print("Trying alternative loading approach...")
+        #     try:
+        #         # Try loading the raw checkpoint and extracting state dict
+        #         checkpoint = torch.load(args.checkpoint, map_location=map_location)
+        #         detector = FontDetector(
+        #             model=model,
+        #             lambda_font=1,
+        #             lambda_direction=1,
+        #             lambda_regression=1,
+        #             font_classification_only=args.font_classification_only,
+        #             lr=1,
+        #             betas=(1, 1),
+        #             num_warmup_iters=1,
+        #             num_iters=1e9,
+        #             num_epochs=1e9,
+        #         )
+        #         # Try loading from state dict directly
+        #         detector.load_state_dict(checkpoint['state_dict'])
+        #         print("Successfully loaded checkpoint via state_dict")
+        #     except Exception as e2:
+        #         print(f"Failed with alternative approach: {str(e2)}")
+        #         raise e
+            # Load checkpoint
+            checkpoint = torch.load(args.checkpoint, map_location=map_location)
+            
+            # Create new state dict with remapped keys
+            new_state_dict = {}
+            for k, v in checkpoint['state_dict'].items():
+                # Remove _orig_mod prefix if it exists
+                new_key = k.replace('model._orig_mod.', 'model.')
+                new_state_dict[new_key] = v
+            
+            # Create detector with remapped state dict
+            detector = FontDetector(
                 model=model,
                 lambda_font=1,
                 lambda_direction=1,
@@ -171,30 +218,12 @@ def load_model(args):
                 num_iters=1e9,
                 num_epochs=1e9,
             )
-        except RuntimeError as e:
-            print(f"Error loading checkpoint: {str(e)}")
-            print("Trying alternative loading approach...")
-            try:
-                # Try loading the raw checkpoint and extracting state dict
-                checkpoint = torch.load(args.checkpoint, map_location=map_location)
-                detector = FontDetector(
-                    model=model,
-                    lambda_font=1,
-                    lambda_direction=1,
-                    lambda_regression=1,
-                    font_classification_only=args.font_classification_only,
-                    lr=1,
-                    betas=(1, 1),
-                    num_warmup_iters=1,
-                    num_iters=1e9,
-                    num_epochs=1e9,
-                )
-                # Try loading from state dict directly
-                detector.load_state_dict(checkpoint['state_dict'])
-                print("Successfully loaded checkpoint via state_dict")
-            except Exception as e2:
-                print(f"Failed with alternative approach: {str(e2)}")
-                raise e
+            detector.load_state_dict(new_state_dict)
+            print("Successfully loaded checkpoint with remapped keys")
+            
+        except Exception as e:
+            print(f"Failed to load checkpoint: {str(e)}")
+            raise e
     else:
         print("Warning: No checkpoint provided. Using untrained model.")
         detector = FontDetector(
