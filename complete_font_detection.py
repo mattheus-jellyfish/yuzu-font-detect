@@ -29,167 +29,14 @@ import pytorch_lightning as ptl
 import torchmetrics
 from typing import List, Tuple, Dict, Any
 from huggingface_hub import hf_hub_download
+from fonts import FONT_LIST
 
 # ================================
 # CONFIGURATION CONSTANTS
 # ================================
 
 INPUT_SIZE = 512
-FONT_COUNT = 135
-
-# ================================
-# FONT LIST
-# ================================
-
-FONT_LIST = [
-    'AlfaSlabOne-Regular.ttf',
-    'Arvo-Bold.ttf',
-    'Arvo-BoldItalic.ttf',
-    'Arvo-Italic.ttf',
-    'Arvo-Regular.ttf',
-    'Bitter-Italic-VariableFont_wght.ttf',
-    'Bitter-VariableFont_wght.ttf',
-    'CormorantGaramond-Bold.ttf',
-    'CormorantGaramond-BoldItalic.ttf',
-    'CormorantGaramond-Italic-VariableFont_wght.ttf',
-    'CormorantGaramond-Italic.ttf',
-    'CormorantGaramond-Light.ttf',
-    'CormorantGaramond-LightItalic.ttf',
-    'CormorantGaramond-Medium.ttf',
-    'CormorantGaramond-MediumItalic.ttf',
-    'CormorantGaramond-Regular.ttf',
-    'CormorantGaramond-SemiBold.ttf',
-    'CormorantGaramond-SemiBoldItalic.ttf',
-    'CormorantGaramond-VariableFont_wght.ttf',
-    'CrimsonText-Bold.ttf',
-    'CrimsonText-BoldItalic.ttf',
-    'CrimsonText-Italic.ttf',
-    'CrimsonText-Regular.ttf',
-    'CrimsonText-SemiBold.ttf',
-    'CrimsonText-SemiBoldItalic.ttf',
-    'Denton-Light.otf',
-    'EBGaramond-Italic-VariableFont_wght.ttf',
-    'EBGaramond-VariableFont_wght.ttf',
-    'IBMPlexSerif-Bold.ttf',
-    'IBMPlexSerif-BoldItalic.ttf',
-    'IBMPlexSerif-ExtraLight.ttf',
-    'IBMPlexSerif-ExtraLightItalic.ttf',
-    'IBMPlexSerif-Italic.ttf',
-    'IBMPlexSerif-Light.ttf',
-    'IBMPlexSerif-LightItalic.ttf',
-    'IBMPlexSerif-Medium.ttf',
-    'IBMPlexSerif-MediumItalic.ttf',
-    'IBMPlexSerif-Regular.ttf',
-    'IBMPlexSerif-SemiBold.ttf',
-    'IBMPlexSerif-SemiBoldItalic.ttf',
-    'IBMPlexSerif-Thin.ttf',
-    'IBMPlexSerif-ThinItalic.ttf',
-    'Inter_28pt-Black.ttf',
-    'Inter_28pt-BlackItalic.ttf',
-    'Inter_28pt-Bold.ttf',
-    'Inter_28pt-BoldItalic.ttf',
-    'Inter_28pt-ExtraBold.ttf',
-    'Inter_28pt-ExtraBoldItalic.ttf',
-    'Inter_28pt-ExtraLight.ttf',
-    'Inter_28pt-ExtraLightItalic.ttf',
-    'Inter_28pt-Italic.ttf',
-    'Inter_28pt-Light.ttf',
-    'Inter_28pt-LightItalic.ttf',
-    'Inter_28pt-Medium.ttf',
-    'Inter_28pt-MediumItalic.ttf',
-    'Inter_28pt-Regular.ttf',
-    'Inter_28pt-SemiBold.ttf',
-    'Inter_28pt-SemiBoldItalic.ttf',
-    'Inter_28pt-Thin.ttf',
-    'Inter_28pt-ThinItalic.ttf',
-    'Inter-Italic-VariableFont_opsz,wght.ttf',
-    'Inter-VariableFont_opsz,wght.ttf',
-    'Lato-Black.ttf',
-    'Lato-BlackItalic.ttf',
-    'Lato-Bold.ttf',
-    'Lato-BoldItalic.ttf',
-    'Lato-Italic.ttf',
-    'Lato-Light.ttf',
-    'Lato-LightItalic.ttf',
-    'Lato-Regular.ttf',
-    'Lato-Thin.ttf',
-    'Lato-ThinItalic.ttf',
-    'LibreBaskerville-Bold.ttf',
-    'LibreBaskerville-Italic.ttf',
-    'LibreBaskerville-Regular.ttf',
-    'Lora-Bold.ttf',
-    'Lora-BoldItalic.ttf',
-    'Lora-Italic-VariableFont_wght.ttf',
-    'Lora-Italic.ttf',
-    'Lora-Medium.ttf',
-    'Lora-MediumItalic.ttf',
-    'Lora-Regular.ttf',
-    'Lora-SemiBold.ttf',
-    'Lora-SemiBoldItalic.ttf',
-    'Lora-VariableFont_wght.ttf',
-    'Merriweather_24pt_SemiCondensed-Black.ttf',
-    'Merriweather_24pt_SemiCondensed-BlackItalic.ttf',
-    'Merriweather_24pt_SemiCondensed-Bold.ttf',
-    'Merriweather_24pt_SemiCondensed-BoldItalic.ttf',
-    'Merriweather_24pt_SemiCondensed-ExtraBold.ttf',
-    'Merriweather_24pt_SemiCondensed-ExtraBoldItalic.ttf',
-    'Merriweather_24pt_SemiCondensed-Italic.ttf',
-    'Merriweather_24pt_SemiCondensed-Light.ttf',
-    'Merriweather_24pt_SemiCondensed-LightItalic.ttf',
-    'Merriweather_24pt_SemiCondensed-Medium.ttf',
-    'Merriweather_24pt_SemiCondensed-MediumItalic.ttf',
-    'Merriweather_24pt_SemiCondensed-Regular.ttf',
-    'Merriweather_24pt_SemiCondensed-SemiBold.ttf',
-    'Merriweather_24pt_SemiCondensed-SemiBoldItalic.ttf',
-    'Merriweather_24pt-Black.ttf',
-    'Merriweather_24pt-BlackItalic.ttf',
-    'Merriweather_24pt-Bold.ttf',
-    'Merriweather_24pt-BoldItalic.ttf',
-    'Merriweather_24pt-ExtraBold.ttf',
-    'Merriweather_24pt-ExtraBoldItalic.ttf',
-    'Merriweather_24pt-Italic.ttf',
-    'Merriweather_24pt-Light.ttf',
-    'Merriweather_24pt-LightItalic.ttf',
-    'Merriweather_24pt-Medium.ttf',
-    'Merriweather_24pt-MediumItalic.ttf',
-    'Merriweather_24pt-Regular.ttf',
-    'Merriweather_24pt-SemiBold.ttf',
-    'Merriweather_24pt-SemiBoldItalic.ttf',
-    'Merriweather-Italic-VariableFont_opsz,wdth,wght.ttf',
-    'Merriweather-VariableFont_opsz,wdth,wght.ttf',
-    'Montserrat-Black.ttf',
-    'Montserrat-BlackItalic.ttf',
-    'Montserrat-Bold.ttf',
-    'Montserrat-BoldItalic.ttf',
-    'Montserrat-ExtraBold.ttf',
-    'Montserrat-ExtraBoldItalic.ttf',
-    'Montserrat-ExtraLight.ttf',
-    'Montserrat-ExtraLightItalic.ttf',
-    'Montserrat-Italic-VariableFont_wght.ttf',
-    'Montserrat-Italic.ttf',
-    'Montserrat-Light.ttf',
-    'Montserrat-LightItalic.ttf',
-    'Montserrat-Medium.ttf',
-    'Montserrat-MediumItalic.ttf',
-    'Montserrat-Regular.ttf',
-    'Montserrat-SemiBold.ttf',
-    'Montserrat-SemiBoldItalic.ttf',
-    'Montserrat-Thin.ttf',
-    'Montserrat-ThinItalic.ttf',
-    'Montserrat-VariableFont_wght.ttf',
-    'PTSerif-Bold.ttf',
-    'PTSerif-BoldItalic.ttf',
-    'PTSerif-Italic.ttf',
-    'PTSerif-Regular.ttf',
-    'Raleway-Black.ttf',
-    'Raleway-BlackItalic.ttf',
-    'Raleway-Bold.ttf',
-    'Raleway-BoldItalic.ttf',
-    'Raleway-ExtraBold.ttf',
-    'Raleway-ExtraBoldItalic.ttf',
-    'Raleway-ExtraLight.ttf',
-    'Raleway-ExtraLightItalic.ttf'
-]
+FONT_COUNT = len(FONT_LIST)
 
 # ================================
 # FONT DATA STRUCTURE
@@ -464,7 +311,7 @@ def get_best_device(prefer_gpu: bool = True) -> torch.device:
 
 def load_simple_font_list() -> List[DSFont]:
     """
-    Load font list from hardcoded list instead of YAML config.
+    Load font list from imported fonts.py instead of YAML config.
     
     SIMPLIFIED FONT LOADING EXPLANATION:
     The original approach:
@@ -474,9 +321,10 @@ def load_simple_font_list() -> List[DSFont]:
     - Handle file system operations
     
     This simplified approach:
-    1. Uses a hardcoded list of font names
+    1. Import font list from fonts.py
     2. Creates DSFont objects directly
     3. No file system dependencies
+    4. Easy to maintain and modify
     
     Makes the script truly standalone.
     """
@@ -502,7 +350,7 @@ def load_font_detection_model(
     # Get device (simplified)
     device = get_best_device(prefer_gpu)
     
-    # Load font list (simplified - no YAML)
+    # Load font list (imported from fonts.py)
     font_list = load_simple_font_list()
     print(f"Loaded {len(font_list)} fonts")
     
