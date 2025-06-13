@@ -29,6 +29,8 @@ import pytorch_lightning as ptl
 import torchmetrics
 from typing import List, Tuple, Dict, Any
 from huggingface_hub import hf_hub_download
+import requests
+from io import BytesIO
 from fonts import FONT_LIST
 
 # ================================
@@ -306,6 +308,55 @@ def get_best_device(prefer_gpu: bool = True) -> torch.device:
         return device
 
 # ================================
+# IMAGE LOADING HELPER
+# ================================
+
+def load_image_from_url_or_path(image_source: str) -> Image.Image:
+    """
+    Load an image from either a URL or local file path.
+    
+    Args:
+        image_source: Either a URL (http/https) or local file path
+        
+    Returns:
+        PIL Image object in RGB format
+        
+    Raises:
+        Exception: If image cannot be loaded from URL or path
+    """
+    # Check if it's a URL
+    if image_source.startswith(('http://', 'https://')):
+        print(f"📥 Downloading image from URL: {image_source}")
+        try:
+            # Download image from URL
+            response = requests.get(image_source, timeout=30)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            
+            # Load image from bytes
+            image = Image.open(BytesIO(response.content)).convert("RGB")
+            print(f"✓ Successfully downloaded and loaded image from URL")
+            return image
+            
+        except requests.exceptions.Timeout:
+            raise Exception(f"Timeout while downloading image from URL: {image_source}")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to download image from URL {image_source}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to process image from URL {image_source}: {str(e)}")
+    
+    else:
+        # Load from local file path
+        print(f"📁 Loading image from local path: {image_source}")
+        try:
+            image = Image.open(image_source).convert("RGB")
+            print(f"✓ Successfully loaded image from local path")
+            return image
+        except FileNotFoundError:
+            raise Exception(f"Image file not found: {image_source}")
+        except Exception as e:
+            raise Exception(f"Failed to load image from path {image_source}: {str(e)}")
+
+# ================================
 # SIMPLIFIED FONT LOADING
 # ================================
 
@@ -427,7 +478,7 @@ def load_font_detection_model(
     return detector, device, font_list
 
 def detect_fonts(
-    image_path: str,
+    image_source: str,
     checkpoint_path: str = None,
     model_type: str = "resnet18",
     num_results: int = 5,
@@ -435,10 +486,10 @@ def detect_fonts(
     font_classification_only: bool = False
 ) -> List[Tuple[str, float]]:
     """
-    Detect fonts in an image.
+    Detect fonts in an image from either a URL or local file path.
     
     Args:
-        image_path: Path to the input image
+        image_source: URL (http/https) or local path to the input image
         checkpoint_path: Path to model checkpoint  
         model_type: Type of model to use
         num_results: Number of top results to return
@@ -447,6 +498,13 @@ def detect_fonts(
         
     Returns:
         List of (font_name, confidence_score) tuples
+        
+    Examples:
+        # Using URL
+        results = detect_fonts("https://example.com/image.jpg", "model.ckpt")
+        
+        # Using local path
+        results = detect_fonts("./images/sample.png", "model.ckpt")
     """
     # Load model (no caching - always fresh)
     detector, device, font_list = load_font_detection_model(
@@ -456,12 +514,11 @@ def detect_fonts(
         font_classification_only=font_classification_only
     )
     
-    # Load and preprocess image
+    # Load and preprocess image (from URL or local path)
     try:
-        image = Image.open(image_path).convert("RGB")
-        print(f"✓ Loaded image: {image_path}")
+        image = load_image_from_url_or_path(image_source)
     except Exception as e:
-        raise Exception(f"Failed to load image {image_path}: {e}")
+        raise Exception(f"Failed to load image {image_source}: {e}")
     
     # Transform image
     transform = transforms.Compose([
@@ -504,18 +561,23 @@ def main():
     import sys
     
     if len(sys.argv) < 3:
-        print("Usage: python complete_font_detection.py <image_path> <checkpoint_path> [num_results]")
-        print("Example: python complete_font_detection.py image.jpg model.ckpt 10")
+        print("Usage: python complete_font_detection.py <image_source> <checkpoint_path> [num_results]")
+        print("\n<image_source> can be:")
+        print("  • Local file path: ./images/sample.jpg")
+        print("  • URL: https://example.com/image.png")
+        print("\nExamples:")
+        print("  python complete_font_detection.py ./images/sample.jpg model.ckpt 10")
+        print("  python complete_font_detection.py https://example.com/image.png model.ckpt 5")
         print("\nNote: checkpoint_path is REQUIRED - untrained models give meaningless predictions!")
         return
     
-    image_path = sys.argv[1]
+    image_source = sys.argv[1]
     checkpoint_path = sys.argv[2]
-    num_results = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+    num_results = int(sys.argv[3]) if len(sys.argv) > 3 else 10
     
     try:
         results = detect_fonts(
-            image_path=image_path,
+            image_source=image_source,
             checkpoint_path=checkpoint_path,
             num_results=num_results
         )
